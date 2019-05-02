@@ -13,6 +13,7 @@
   "author": "Yannick Eckey",
   "license": "UNLICENSED",
   "dependencies": {
+    "@s524797336/noble-mac": "^0.1.2",
     "mqtt": "^2.18.8",
     "noble": "^1.9.0",
     "noble-mac": "git://github.com/Timeular/noble-mac.git"

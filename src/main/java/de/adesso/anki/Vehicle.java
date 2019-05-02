@@ -5,6 +5,7 @@ import java.time.LocalTime;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Multimap;
 
+import de.adesso.anki.messages.LocalizationIntersectionUpdateMessage;
 import de.adesso.anki.messages.Message;
 
 // TODO: Manage connection status and fail gracefully if disconnected
@@ -80,7 +81,7 @@ public class Vehicle {
   }
   
   @Deprecated
-  public void addMessageListener(MessageListener listener) {
+  public void addMessageListener(Class<LocalizationIntersectionUpdateMessage> localizationIntersectionUpdateMessageClass, MessageListener listener, Vehicle v) {
     this.addMessageListener(Message.class, listener);
   }
   

@@ -1,8 +1,10 @@
 package Project3;
 
 import de.adesso.anki.AnkiConnector;
+import de.adesso.anki.RoadmapScanner;
 import de.adesso.anki.Vehicle;
-import de.adesso.anki.messages.SdkModeMessage;
+import de.adesso.anki.messages.*;
+import de.adesso.anki.roadmap.Roadmap;
 
 import java.util.Iterator;
 import java.util.List;
@@ -13,8 +15,8 @@ public class IntersectionMain {
 
     public static void main(String[] args) throws IOException{
 
-        final int PORT = 9000;
-        final String HOST = "localhost";
+        final int PORT = 5000;
+        final String HOST = "192.168.43.243";
 
         //This does the initial setup of the car
         System.out.println("Creating connection");
@@ -26,18 +28,43 @@ public class IntersectionMain {
             System.out.println("No cars found");
         }
 
-        /**
-         * This goes through each vehicle and sets the sdkmode message
-         * The ankiConnectionTest has comments that this
-         * must be done with every car.
-         **/
-        Iterator<Vehicle> iter = vehicleList.iterator();
-        while(iter.hasNext()){
-            Vehicle v = iter.next();
-            v.connect();
-            v.sendMessage(new SdkModeMessage());
+        Vehicle v = vehicleList.get(0);
+        v.connect();
+        v.sendMessage(new SdkModeMessage());
+        RoadmapScanner rs = new RoadmapScanner(v);
+        Roadmap rm = new Roadmap();
+        boolean isComplete = false;
+        /* This will build a roadmap but currently never exits the while loop.
+        while(!isComplete) {
+            rs.startScanning();
+            isComplete = rs.isComplete();
         }
-
+        rm = rs.getRoadmap();
+        rs.stopScanning();
+        v.sendMessage(new SetSpeedMessage(0, 200));
+        try {
+            Thread.sleep(10000);
+        }catch(InterruptedException e){
+            e.printStackTrace();
+        }*/
+        v.sendMessage(new SetSpeedMessage(200, 200));
+        v.addMessageListener(LocalizationIntersectionUpdateMessage.class,
+                (message) -> transitionUpdateHandler(message, v));
     }
 
+
+
+    public static void transitionUpdateHandler(LocalizationIntersectionUpdateMessage message, Vehicle v) {
+        System.out.println(message.getIntersectionCode());
+        if (message.getIntersectionCode() == 0){
+            v.sendMessage(new SetSpeedMessage(0, 999999999));
+            try {
+                Thread.sleep(3000);
+            }catch (InterruptedException e){
+                e.printStackTrace();
+            }
+            v.sendMessage(new SetSpeedMessage(200, 200));
+
+        }
+    }
 }
