@@ -1,11 +1,9 @@
 package edu.oswego.cs.CPSLab.anki.FourWayStop;
 import java.io.*;
 import java.net.*;
-import java.nio.*;
 import java.util.*;
-import java.util.concurrent.atomic.*;
 
-public class CCNA {
+public class CCNA implements IntersectionHandler {
 	//opcodes
 	public static final int IGNORE_MESSAGE = 0;
 	public static final int BROADCAST_MESSAGE = 1;
@@ -14,124 +12,146 @@ public class CCNA {
 	
 	public static final int PORT = 9000;
 	public static String MULTI_ADDRESS = "239.255.4.36";
-	public MulticastSocket sock = null;
+	private MulticastSocket sock = null;
 	
-	private static int remainingCycles = 120000;
-	public static AtomicBoolean killRequested = new AtomicBoolean(false);
-	private static AtomicBoolean clearReceived = new AtomicBoolean(false);
-	private static LinkedList<byte[]> outgoingData = new LinkedList<byte[]>();
-	private static AtomicInteger broadcastListenersActive = new AtomicInteger(0);
-	private static ArrayList<VehicleInfo> incomingVehicles = new ArrayList<VehicleInfo>();
-	private static AtomicBoolean notificationReceived = new AtomicBoolean(false);
-	private static Queue<VehicleInfo> waitingVehicles = null;
-	private static String lastMACbroadcast = "";
+	/**Set by broadcast, used by becomeMaster and awaitClear.
+	 * If no broadcast occurs before trying to become master,
+	 * becomeMaster should timeout because nobody knows we exist,
+	 * a prerequisite for assigning us master. 
+	**/
+	private String lastMACbroadcast = "";
+	
+	public CCNA() {
+		try {
+			sock = new MulticastSocket(PORT);
+			sock.joinGroup(InetAddress.getByName(MULTI_ADDRESS));
+		}
+		catch (IOException e) {
+			if (sock != null) sock.close();
+		}
+	}
+	public void kill() {
+		try {
+			sock.leaveGroup(InetAddress.getByName(MULTI_ADDRESS));
+		}
+		catch (Exception e) {}
+		sock.close();
+	}
 	//sender functions
 	//sends our info to everyone
-	public void broadcast(VehicleInfo vi) {
+	public boolean broadcast(VehicleInfo vi) {
 		lastMACbroadcast = vi.MACid;
-		sendPacket(BROADCAST_MESSAGE, vi, "Broadcast failed.");
+		return sendPacket(BROADCAST_MESSAGE, vi, "Broadcast failed.");
 	}
 	//tells everyone that we are out of the intersection
-	public void clearIntersection() {
-		sendPacket(CLEAR_MESSAGE, null, "Clear alert failed.");
+	public boolean clearIntersection() {
+		return sendPacket(CLEAR_MESSAGE, null, "Clear alert failed.");
 	}
 	//the target will filter out notifications not meant for it
-	public void notify(VehicleInfo sender) {
-		sendPacket(NOTIFY_MESSAGE, sender, "Notification failed.");
+	public boolean notify(VehicleInfo sender) {
+		return sendPacket(NOTIFY_MESSAGE, sender, "Notification failed.");
 	}
 	
 	
 	
 	
 	//listener functions
-	//blocks until a clear is received
-	public void awaitClearIntersection() {
-		clearReceived.set(false);
-		while (clearReceived.get() == false) {
-			try {
-				Thread.sleep(2);
+	/**Blocks until a clear is received.
+	 * Responds to incoming broadcasts with a master claim.
+	 * timeout is in milliseconds.
+	 * returns a list of all new arrivals, unless no one sent a broadcast or clear.
+	 */
+	public Queue<VehicleInfo> awaitClearIntersection(int timeout) {
+		boolean clearReceived = false;
+		long cutoff = System.currentTimeMillis() + timeout;
+		Queue<VehicleInfo> arrivals = new LinkedList<VehicleInfo>();
+		while (!clearReceived) {
+			//wait for as long as we have left
+			byte[] packet = receiveData((int)(cutoff - System.currentTimeMillis()));
+			if (packet == null) {
+				//we timed out, so we're done
+				return (arrivals.size() > 0) ? arrivals : null;
 			}
-			catch (InterruptedException e) {}
+			int opcode = extractOpcode(packet);
+			if (opcode == CLEAR_MESSAGE) {
+				//we got what we were waiting for
+				clearReceived = true;
+			}
+			else if (opcode == BROADCAST_MESSAGE && extractVehicleInfo(packet) != null) {
+				arrivals.add(extractVehicleInfo(packet));
+				//we need to respond that we're master
+				VehicleInfo vi = new VehicleInfo();
+				vi.isMaster = true;
+				vi.MACid = lastMACbroadcast;
+				sendPacket(BROADCAST_MESSAGE, vi, "Master assertion failed.");
+			}
 		}
-		clearReceived.set(false);
+		return arrivals;
 	}
 	//responders will be added to the queue if not already present
 	//timeout is in milliseconds
 	//this method should only ever be active in one thread
-	public void listenForBroadcast(Queue<VehicleInfo> responders, int timeout) {
-		//only clear the list if no one else is using it,
-		//but atomically update the value so no one else clears it after us
-		if (broadcastListenersActive.compareAndSet(0, 1)) {
-			incomingVehicles.clear();
-		}
-		//add ourselves to the count if someone else is already waiting
-		else {
-			broadcastListenersActive.incrementAndGet();
-		}
-		//the first point we care about
-		int startIndex = incomingVehicles.size();
-		//wait the appropriate amount of time
-		try {
-			Thread.sleep(timeout);
-		}
-		//maybe we should try to wait the full time again?
-		catch (InterruptedException e) {}
-		//the last point we care about
-		int endIndex = incomingVehicles.size();
-		//grab all the vehicles we care about if they are valid
-		for (int i = startIndex; i < endIndex; i++) {
-			VehicleInfo vi = incomingVehicles.get(i);
-			if (vi != null && !responders.contains(vi)) {
-				responders.add(vi);
+	public Queue<VehicleInfo> listenToBroadcast(int timeout) {
+		boolean timedOut = false;
+		long cutoff = System.currentTimeMillis() + timeout;
+		Queue<VehicleInfo> responders = new LinkedList<VehicleInfo>();
+		while (!timedOut) {
+			//wait for as long as we have left
+			byte[] packet = receiveData((int)(cutoff - System.currentTimeMillis()));
+			if (packet == null) {
+				//we timed out, so we're done
+				timedOut = true;
+			}
+			else if (extractOpcode(packet) == BROADCAST_MESSAGE) {
+				VehicleInfo vi = extractVehicleInfo(packet);
+				if (vi != null && !responders.contains(vi)) {
+					responders.add(vi);
+				}
 			}
 		}
-		//remove ourselves from the count of listeners
-		broadcastListenersActive.decrementAndGet();
+		return responders;
 	}
-	//the queue will be purged and then filled with whatever the previous master sent
-	public void becomeMaster(Queue<VehicleInfo> laterVehicles) {
-		//clear any prior flags
-		notificationReceived.set(false);
-		//wait for the flag to be flipped
-		while (notificationReceived.get() == false) {
-			try {
-				Thread.sleep(2);
+	//the queue will contain whatever the previous master sent
+	public Queue<VehicleInfo> becomeMaster(int timeout) {
+		boolean ourTurn = false;
+		long cutoff = System.currentTimeMillis() + timeout;
+		while (!ourTurn) {
+			//wait for as long as we have left
+			byte[] packet = receiveData((int)(cutoff - System.currentTimeMillis()));
+			if (packet == null) {
+				//we timed out, so we're done
+				return null;
 			}
-			catch (InterruptedException e) {}
-		}
-		//grab the queue
-		Queue<VehicleInfo> claimedVehicles = waitingVehicles;
-		//check if we are actually supposed to be master now
-		if (claimedVehicles.peek() != null && claimedVehicles.peek().MACid.equals(lastMACbroadcast)) {
-			//purge the queue
-			laterVehicles.clear();
-			//fill it with the passed elements
-			for (VehicleInfo vi : claimedVehicles) {
-				laterVehicles.add(vi);
+			int opcode = extractOpcode(packet);
+			if (opcode == NOTIFY_MESSAGE) {
+				//check if it's for us
+				VehicleInfo sender = extractVehicleInfo(packet);
+				//if it's us, the check will have the side effect of removing us from the queue,
+				//making it ready for return
+				if (sender != null && sender.otherVehicles != null && sender.otherVehicles.poll().MACid.equals(lastMACbroadcast)) {
+					return sender.otherVehicles;
+				}
 			}
-			//take ourselves out of the queue
-			laterVehicles.poll();
 		}
-		//if it wasn't for us, just recurse
-		else {
-			becomeMaster(laterVehicles);
-		}
+		//this should never be reached because receiveData will eventually return null
+		return null;
 	}
 	
 	
 	
 	//auxiliary functions, for abstracting the multicast part
-	public void sendPacket(int opcode, VehicleInfo vi, String failureMessage) {
+	private boolean sendPacket(int opcode, VehicleInfo vi, String failureMessage) {
 		try {
 			ByteArrayOutputStream data = new ByteArrayOutputStream();
 			ObjectOutputStream oos = new ObjectOutputStream(data);
 			oos.write(opcode);
 			oos.writeObject(vi);
-			outgoingData.addLast(data.toByteArray());
+			return broadcastData(data.toByteArray());
 		}
 		catch (IOException e) {
 			//not much we can do here
 			System.out.println(failureMessage);
+			return false;
 		}
 	}
 	//builds a packet and sends it to everyone it knows about
@@ -142,7 +162,7 @@ public class CCNA {
 			sock.send(packet);
 			return true;
 		}
-		catch (IOException e) {
+		catch (Exception e) {
 			return false;
 		}
 	}
@@ -171,6 +191,7 @@ public class CCNA {
 	//waits only as long as the timeout (in milliseconds)
 	//returns null if it timed out
 	private byte[] receiveData(int timeout) {
+		if (timeout < 0) return null;
 		DatagramPacket pack = new DatagramPacket(new byte[512], 512);
 		try {
 			sock.setSoTimeout(timeout);
@@ -179,57 +200,6 @@ public class CCNA {
 		}
 		catch (Exception e) {
 			return null;
-		}
-	}
-	
-	private class Loop extends Thread {
-		private boolean constructionSuccessful = true;
-		public Loop() {
-			try {
-				if (sock == null) {
-					sock = new MulticastSocket(PORT);
-					sock.joinGroup(InetAddress.getByName(MULTI_ADDRESS));
-				}
-			}
-			catch (IOException e) {
-				constructionSuccessful = false;
-			}
-		}
-		public void run() {
-			if (!constructionSuccessful) return;
-			while (!killRequested.get() && remainingCycles > 0) {
-				//send data if we have some
-				if (!outgoingData.isEmpty()) {
-					broadcastData(outgoingData.pollFirst());
-				}
-				//wait up to 10 milliseconds for a packet
-				byte[] payload = receiveData(10);
-				//handle the packet
-				int opcode = extractOpcode(payload);
-				//is broadcast
-				if (opcode == 1 && broadcastListenersActive.get() > 0) {
-					VehicleInfo vi = extractVehicleInfo(payload);
-					if (vi != null) incomingVehicles.add(vi);
-				}
-				//is clear
-				else if (opcode == 2) {
-					clearReceived.set(true);
-				}
-				//is notify
-				else if (opcode == 3) {
-					VehicleInfo vi = extractVehicleInfo(payload);
-					waitingVehicles = vi.otherVehicles;
-					notificationReceived.set(true);
-				}
-				//is a packet that should be ignored
-				else {}
-				remainingCycles--;
-			}
-			try {
-				sock.leaveGroup(InetAddress.getByName(MULTI_ADDRESS));
-				sock.close();
-			}
-			catch (IOException e) {}
 		}
 	}
 }
