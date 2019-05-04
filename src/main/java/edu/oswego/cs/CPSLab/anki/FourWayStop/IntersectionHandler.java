@@ -13,9 +13,9 @@ public interface IntersectionHandler {
     boolean clearIntersection();
     boolean notify(VehicleInfo target);
     
-    //returns true if and only if a clear was actually received,
-    //rather than a timeout
-    boolean awaitClearIntersection(int timeout);
+    //returns null if and only if no clears or broadcasts were received before timing out.
+    //otherwise returns a queue of vehicles that arrived during the function's execution.
+    Queue<VehicleInfo> awaitClearIntersection(int timeout);
     //returns a queue of responders
     //null indicates the timeout was reached
     Queue<VehicleInfo> listenToBroadcast(int timeout);
