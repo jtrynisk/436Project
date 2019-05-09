@@ -58,18 +58,17 @@ public class IntersectionMain {
         CCNA cc = new CCNA();
         VehicleInfo vi = new VehicleInfo();
         vi.MACid = v.getAddress();
-        System.out.println(message.getIntersectionCode());
         if (message.getIntersectionCode() == 0){
             v.sendMessage(new SetSpeedMessage(0, 999999999));
             vi.isClear = false;
             vi.locationID = message.getIntersectionCode();
             vi.speed = 0;
             vi.timestamp = Instant.now();
-            System.out.println("Broadcasting");
-            cc.broadcast(vi);
-            System.out.println("Listen to broadcast");
+            boolean broadcasted = cc.broadcast(vi);
+            System.out.println(broadcasted);
             Queue<VehicleInfo> atIntersection = cc.listenToBroadcast(3000);
             if(atIntersection.isEmpty()) {
+                System.out.println("No one at intersection");
                 v.sendMessage(new SetSpeedMessage(200, 200));
             }
 
