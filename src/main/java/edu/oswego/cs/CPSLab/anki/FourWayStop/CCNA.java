@@ -14,6 +14,7 @@ public class CCNA implements IntersectionHandler {
 	public static final int PORT = 9000;
 	public static String MULTI_ADDRESS = "239.255.4.36";
 	private MulticastSocket sock = null;
+	private DatagramSocket outSock = null;
 	
 	/**Set by broadcast, used by becomeMaster and awaitClear.
 	 * If no broadcast occurs before trying to become master,
@@ -26,9 +27,13 @@ public class CCNA implements IntersectionHandler {
 		try {
 			sock = new MulticastSocket(PORT);
 			sock.joinGroup(InetAddress.getByName(MULTI_ADDRESS));
+			outSock = new DatagramSocket();
 		}
 		catch (IOException e) {
-			if (sock != null) sock.close();
+			if (sock != null) {
+				sock.close();
+				outSock.close();
+			}
 		}
 	}
 	public void kill() {
@@ -37,6 +42,7 @@ public class CCNA implements IntersectionHandler {
 		}
 		catch (Exception e) {}
 		sock.close();
+		outSock.close();
 	}
 	//sender functions
 	//sends our info to everyone
@@ -179,7 +185,7 @@ public class CCNA implements IntersectionHandler {
 	private boolean broadcastData(byte[] data) {
 		try {
 			DatagramPacket packet = new DatagramPacket(data, data.length, InetAddress.getByName(MULTI_ADDRESS), PORT);
-			sock.send(packet);
+			outSock.send(packet);
 			return true;
 		}
 		catch (Exception e) {
