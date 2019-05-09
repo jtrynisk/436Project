@@ -26,12 +26,15 @@ public class CCNA implements IntersectionHandler {
 	public CCNA() {
 		try {
 			sock = new MulticastSocket(PORT);
-			sock.joinGroup(InetAddress.getByName(MULTI_ADDRESS));
 			outSock = new DatagramSocket();
+			sock.joinGroup(InetAddress.getByName(MULTI_ADDRESS));
 		}
 		catch (IOException e) {
+			System.out.println(e.getMessage());
 			if (sock != null) {
 				sock.close();
+			}
+			if (outSock != null) {
 				outSock.close();
 			}
 		}
