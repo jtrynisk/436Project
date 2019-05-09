@@ -31,11 +31,13 @@ public class IntersectionMain {
             System.out.println("No cars found");
         }
         Vehicle temp = null;
+        int index = 0;
         for(int i = 0; i < vehicleList.size(); i++){
             temp = vehicleList.get(i);
-            if (temp.getAdvertisement().getModelId() == 9);
+            if (temp.getAdvertisement().getModelId() == 8)
+                index = i;
         }
-        Vehicle v = temp;
+        Vehicle v = vehicleList.get(index);
         v.connect();
         v.sendMessage(new SdkModeMessage());
 
@@ -44,8 +46,13 @@ public class IntersectionMain {
                 (message) -> transitionUpdateHandler(message, v));
     }
 
-
-
+    /**
+     * This takes an intersection message, and a vehicle and has the car stop,
+     * broadcast and listen for a message. It will then continue to navigate
+     * the track.
+     * @param message - the intersection message
+     * @param v - the vehicle passed to the function
+     */
     public static void transitionUpdateHandler(LocalizationIntersectionUpdateMessage message, Vehicle v) {
         CCNA cc = new CCNA();
         VehicleInfo vi = new VehicleInfo();
@@ -53,18 +60,15 @@ public class IntersectionMain {
         System.out.println(message.getIntersectionCode());
         if (message.getIntersectionCode() == 0){
             v.sendMessage(new SetSpeedMessage(0, 999999999));
-            try {
                 vi.isClear = false;
                 vi.locationID = message.getIntersectionCode();
                 vi.speed = 0;
                 vi.timestamp = Instant.now();
                 cc.broadcast(vi);
-                Thread.sleep(3000);
-            }catch (InterruptedException e){
-                e.printStackTrace();
-            }
+                cc.listenToBroadcast(3000);
             v.sendMessage(new SetSpeedMessage(200, 200));
 
         }
     }
+
 }
