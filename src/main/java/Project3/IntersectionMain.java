@@ -6,7 +6,9 @@ import de.adesso.anki.Vehicle;
 import de.adesso.anki.messages.*;
 import de.adesso.anki.roadmap.Roadmap;
 import edu.oswego.cs.CPSLab.anki.FourWayStop.CCNA;
+import edu.oswego.cs.CPSLab.anki.FourWayStop.VehicleInfo;
 
+import java.time.Instant;
 import java.util.Iterator;
 import java.util.List;
 
@@ -17,7 +19,7 @@ public class IntersectionMain {
     public static void main(String[] args) throws IOException{
 
         final int PORT = 5000;
-        final String HOST = "192.168.43.243";
+        final String HOST = "172.20.10.8";
 
         //This does the initial setup of the car
         System.out.println("Creating connection");
@@ -28,17 +30,12 @@ public class IntersectionMain {
         if(vehicleList.isEmpty()){
             System.out.println("No cars found");
         }
-
-        Iterator<Vehicle> iter = vehicleList.iterator();
-
-
+        Vehicle temp = null;
         for(int i = 0; i < vehicleList.size(); i++){
-            Vehicle temp = iter.next();
-            if (temp.getAdvertisement().getIdentifier() == 'a'){}
-                //v = temp;
-
+            temp = vehicleList.get(i);
+            if (temp.getAdvertisement().getModelId() == 9);
         }
-        Vehicle v = vehicleList.get(0);
+        Vehicle v = temp;
         v.connect();
         v.sendMessage(new SdkModeMessage());
 
@@ -51,12 +48,17 @@ public class IntersectionMain {
 
     public static void transitionUpdateHandler(LocalizationIntersectionUpdateMessage message, Vehicle v) {
         CCNA cc = new CCNA();
+        VehicleInfo vi = new VehicleInfo();
+        vi.MACid = v.getAddress();
         System.out.println(message.getIntersectionCode());
         if (message.getIntersectionCode() == 0){
             v.sendMessage(new SetSpeedMessage(0, 999999999));
             try {
-                //Needs vehicle info
-                //cc.broadcast();
+                vi.isClear = false;
+                vi.locationID = message.getIntersectionCode();
+                vi.speed = 0;
+                vi.timestamp = Instant.now();
+                cc.broadcast(vi);
                 Thread.sleep(3000);
             }catch (InterruptedException e){
                 e.printStackTrace();
