@@ -14,7 +14,7 @@ plugins {
 apply plugin: 'java'
 apply plugin: 'application'
 apply plugin: 'maven'
-mainClassName = 'edu.oswego.cs.CPSLab.anki.AnkiConnectionTest'
+mainClassName = 'Project3.IntersectionMain'
 group = 'com.github.tenbergen'
 
 repositories {
