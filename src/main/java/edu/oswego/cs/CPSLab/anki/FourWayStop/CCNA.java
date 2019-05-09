@@ -12,7 +12,7 @@ public class CCNA implements IntersectionHandler {
 	public static final int NOTIFY_MESSAGE = 3;
 	
 	public static final int PORT = 9000;
-	public static String MULTI_ADDRESS = "239.255.4.36";
+	public static String MULTI_ADDRESS = "239.192.0.1";
 	private MulticastSocket sock = null;
 	private DatagramSocket outSock = null;
 	
