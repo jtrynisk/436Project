@@ -31,14 +31,7 @@ public class IntersectionMain {
         if(vehicleList.isEmpty()){
             System.out.println("No cars found");
         }
-        Vehicle temp = null;
-        int index = 0;
-        for(int i = 0; i < vehicleList.size(); i++){
-            temp = vehicleList.get(i);
-            if (temp.getAdvertisement().getModelId() == 8)
-                index = i;
-        }
-        Vehicle v = vehicleList.get(index);
+        Vehicle v = vehicleList.get(0);
         v.connect();
         v.sendMessage(new SdkModeMessage());
 
@@ -64,12 +57,14 @@ public class IntersectionMain {
             vi.locationID = message.getIntersectionCode();
             vi.speed = 0;
             vi.timestamp = Instant.now();
-            boolean broadcasted = cc.broadcast(vi);
-            System.out.println(broadcasted);
+            cc.broadcast(vi);
             Queue<VehicleInfo> atIntersection = cc.listenToBroadcast(3000);
             if(atIntersection.isEmpty()) {
                 System.out.println("No one at intersection");
                 v.sendMessage(new SetSpeedMessage(200, 200));
+            }
+            else{
+                System.out.println("Intersection not empty");
             }
 
         }
