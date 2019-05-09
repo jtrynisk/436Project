@@ -16,12 +16,12 @@ import java.io.IOException;
 import java.util.Queue;
 
 public class IntersectionMain {
-
+	private static CCNA netAdapter;
     public static void main(String[] args) throws IOException{
 
         final int PORT = 5000;
-        final String HOST = "172.20.10.8";
-        CCNA netAdapter = new CCNA();
+        final String HOST = (args.length > 0) ? args[0] : "172.20.10.8";
+        netAdapter = new CCNA();
 
         //This does the initial setup of the car
         System.out.println("Creating connection");
