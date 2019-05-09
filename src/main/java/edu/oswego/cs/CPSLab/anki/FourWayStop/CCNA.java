@@ -239,7 +239,11 @@ public class CCNA implements IntersectionHandler {
 			sock.receive(pack);
 			return pack.getData();
 		}
-		catch (Exception e) {
+		catch (SocketTimeoutException e) {
+			//this is expected
+			return null;
+		}
+		catch (IOException e) {
 			System.out.println(e.getMessage());
 			return null;
 		}
