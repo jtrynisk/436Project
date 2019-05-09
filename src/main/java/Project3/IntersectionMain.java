@@ -13,6 +13,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import java.io.IOException;
+import java.util.Queue;
 
 public class IntersectionMain {
 
@@ -60,13 +61,17 @@ public class IntersectionMain {
         System.out.println(message.getIntersectionCode());
         if (message.getIntersectionCode() == 0){
             v.sendMessage(new SetSpeedMessage(0, 999999999));
-                vi.isClear = false;
-                vi.locationID = message.getIntersectionCode();
-                vi.speed = 0;
-                vi.timestamp = Instant.now();
-                cc.broadcast(vi);
-                cc.listenToBroadcast(3000);
-            v.sendMessage(new SetSpeedMessage(200, 200));
+            vi.isClear = false;
+            vi.locationID = message.getIntersectionCode();
+            vi.speed = 0;
+            vi.timestamp = Instant.now();
+            System.out.println("Broadcasting");
+            cc.broadcast(vi);
+            System.out.println("Listen to broadcast");
+            Queue<VehicleInfo> atIntersection = cc.listenToBroadcast(3000);
+            if(atIntersection.isEmpty()) {
+                v.sendMessage(new SetSpeedMessage(200, 200));
+            }
 
         }
     }
