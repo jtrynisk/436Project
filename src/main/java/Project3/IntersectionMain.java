@@ -11,6 +11,7 @@ import edu.oswego.cs.CPSLab.anki.FourWayStop.VehicleInfo;
 import java.time.Instant;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Scanner;
 
 import java.io.IOException;
 import java.util.Queue;
@@ -55,6 +56,37 @@ public class IntersectionMain {
         }
         v.addMessageListener(LocalizationIntersectionUpdateMessage.class,
                 (message) -> transitionUpdateHandler(message, v, netAdapter));
+        boolean exitRequested = false;
+        Scanner s = new Scanner(System.in);
+        String response = "";
+        while(!exitRequested) {
+        	response = s.nextLine();
+        	switch(response) {
+        	case "exit":
+        		exitRequested = true;
+        		break;
+        	case "go":
+        		v.sendMessage(new SetSpeedMessage(200, 200));
+        		break;
+        	case "stop:":
+        		v.sendMessage(new SetSpeedMessage(0, 999999));
+        		break;
+        	case "right":
+        		v.sendMessage(new ChangeLaneMessage(100, 100, 64));
+        		break;
+        	case "left":
+        		v.sendMessage(new ChangeLaneMessage(100, 100, 32));
+        		break;
+        	case "faster":
+        		v.sendMessage(new SetSpeedMessage(250, 200));
+        		break;
+        	}
+        }
+        //clean up
+        s.close();
+        netAdapter.kill();
+        v.disconnect();
+        anki.close();
     }
 
     /**
