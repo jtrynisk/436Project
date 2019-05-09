@@ -37,6 +37,21 @@ public class IntersectionMain {
         v.sendMessage(new SdkModeMessage());
 
         v.sendMessage(new SetSpeedMessage(200, 200));
+        //move to rightmost lane
+        try {
+        	System.out.println("Press enter for right lane, type anything else first for middle right lane.");
+        	byte[] inp = new byte[256];
+        	System.in.read(inp);
+        	if (inp[0] == 10) {
+        		v.sendMessage(new ChangeLaneMessage(100, 100, 64));
+        	}
+        	else {
+        		v.sendMessage(new ChangeLaneMessage(100, 100, 32));
+        	}
+        }
+        catch (Exception e) {
+        	v.sendMessage(new ChangeLaneMessage(100, 100, 64));
+        }
         v.addMessageListener(LocalizationIntersectionUpdateMessage.class,
                 (message) -> transitionUpdateHandler(message, v, netAdapter));
     }
