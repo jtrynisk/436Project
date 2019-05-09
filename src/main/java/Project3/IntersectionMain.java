@@ -21,6 +21,7 @@ public class IntersectionMain {
 
         final int PORT = 5000;
         final String HOST = "172.20.10.8";
+        CCNA netAdapter = new CCNA();
 
         //This does the initial setup of the car
         System.out.println("Creating connection");
@@ -37,7 +38,7 @@ public class IntersectionMain {
 
         v.sendMessage(new SetSpeedMessage(200, 200));
         v.addMessageListener(LocalizationIntersectionUpdateMessage.class,
-                (message) -> transitionUpdateHandler(message, v));
+                (message) -> transitionUpdateHandler(message, v, netAdapter));
     }
 
     /**
@@ -47,26 +48,46 @@ public class IntersectionMain {
      * @param message - the intersection message
      * @param v - the vehicle passed to the function
      */
-    public static void transitionUpdateHandler(LocalizationIntersectionUpdateMessage message, Vehicle v) {
-        CCNA cc = new CCNA();
-        VehicleInfo vi = new VehicleInfo();
-        vi.MACid = v.getAddress();
+    public static void transitionUpdateHandler(LocalizationIntersectionUpdateMessage message, Vehicle v, CCNA netAdapter) {
+        VehicleInfo ourInfo = new VehicleInfo();
+        ourInfo.MACid = v.getAddress();
         if (message.getIntersectionCode() == 0){
             v.sendMessage(new SetSpeedMessage(0, 999999999));
-            vi.isClear = false;
-            vi.locationID = message.getIntersectionCode();
-            vi.speed = 0;
-            vi.timestamp = Instant.now();
-            cc.broadcast(vi);
-            Queue<VehicleInfo> atIntersection = cc.listenToBroadcast(3000);
+            ourInfo.isClear = false;
+            ourInfo.locationID = message.getIntersectionCode();
+            ourInfo.speed = 0;
+            ourInfo.timestamp = Instant.now();
+            ourInfo.otherVehicles = null;
+            netAdapter.broadcast(ourInfo);
+            Queue<VehicleInfo> atIntersection = netAdapter.listenToBroadcast(3000);
             if(atIntersection.isEmpty()) {
                 System.out.println("No one at intersection");
                 v.sendMessage(new SetSpeedMessage(200, 200));
             }
             else{
                 System.out.println("Intersection not empty");
+                boolean otherMaster = false;
+                for (VehicleInfo ve : atIntersection) {
+                    if (ve.isMaster) {
+                        otherMaster = true;
+                    }
+                }
+                if (otherMaster) {
+                    ourInfo.otherVehicles = netAdapter.becomeMaster(10000);
+                    ourInfo.otherVehicles.addAll(netAdapter.awaitClearIntersection(10000));
+                    v.sendMessage(new SetSpeedMessage(200, 200));
+                }
+                else{
+                    v.sendMessage(new SetSpeedMessage(200, 200));
+                }
             }
-
+            ourInfo.isMaster = true;
+            netAdapter.broadcast(ourInfo);
+            v.sendMessage(new SetSpeedMessage(200, 200));
+        }
+        else if(message.getIntersectionCode() == 1){
+            System.out.println("Cleared Intersection");
+            netAdapter.clearIntersection();
         }
     }
 
