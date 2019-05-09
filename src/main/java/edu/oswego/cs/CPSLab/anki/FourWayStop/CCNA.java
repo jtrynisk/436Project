@@ -2,6 +2,7 @@ package edu.oswego.cs.CPSLab.anki.FourWayStop;
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.time.*;
 
 public class CCNA implements IntersectionHandler {
 	//opcodes
@@ -63,6 +64,7 @@ public class CCNA implements IntersectionHandler {
 	 */
 	public Queue<VehicleInfo> awaitClearIntersection(int timeout) {
 		boolean clearReceived = false;
+		Instant start = Instant.now();
 		long cutoff = System.currentTimeMillis() + timeout;
 		Queue<VehicleInfo> arrivals = new LinkedList<VehicleInfo>();
 		while (!clearReceived) {
@@ -71,6 +73,11 @@ public class CCNA implements IntersectionHandler {
 			if (packet == null) {
 				//we timed out, so we're done
 				return (arrivals.size() > 0) ? arrivals : null;
+			}
+			//screen ancient packets
+			Instant then = extractInstant(packet);
+			if (then == null || then.isBefore(start)) {
+				continue;
 			}
 			int opcode = extractOpcode(packet);
 			if (opcode == CLEAR_MESSAGE) {
@@ -93,6 +100,7 @@ public class CCNA implements IntersectionHandler {
 	//this method should only ever be active in one thread
 	public Queue<VehicleInfo> listenToBroadcast(int timeout) {
 		boolean timedOut = false;
+		Instant start = Instant.now();
 		long cutoff = System.currentTimeMillis() + timeout;
 		Queue<VehicleInfo> responders = new LinkedList<VehicleInfo>();
 		while (!timedOut) {
@@ -102,7 +110,12 @@ public class CCNA implements IntersectionHandler {
 				//we timed out, so we're done
 				timedOut = true;
 			}
-			else if (extractOpcode(packet) == BROADCAST_MESSAGE) {
+			//screen ancient packets
+			Instant then = extractInstant(packet);
+			if (then == null || then.isBefore(start)) {
+				continue;
+			}
+			if (extractOpcode(packet) == BROADCAST_MESSAGE) {
 				VehicleInfo vi = extractVehicleInfo(packet);
 				if (vi != null && !responders.contains(vi)) {
 					responders.add(vi);
@@ -114,6 +127,7 @@ public class CCNA implements IntersectionHandler {
 	//the queue will contain whatever the previous master sent
 	public Queue<VehicleInfo> becomeMaster(int timeout) {
 		boolean ourTurn = false;
+		Instant start = Instant.now();
 		long cutoff = System.currentTimeMillis() + timeout;
 		while (!ourTurn) {
 			//wait for as long as we have left
@@ -121,6 +135,11 @@ public class CCNA implements IntersectionHandler {
 			if (packet == null) {
 				//we timed out, so we're done
 				return null;
+			}
+			//screen ancient packets
+			Instant then = extractInstant(packet);
+			if (then == null || then.isBefore(start)) {
+				continue;
 			}
 			int opcode = extractOpcode(packet);
 			if (opcode == NOTIFY_MESSAGE) {
@@ -146,6 +165,7 @@ public class CCNA implements IntersectionHandler {
 			ObjectOutputStream oos = new ObjectOutputStream(data);
 			oos.write(opcode);
 			oos.writeObject(vi);
+			oos.writeObject(Instant.now());
 			return broadcastData(data.toByteArray());
 		}
 		catch (IOException e) {
@@ -182,6 +202,18 @@ public class CCNA implements IntersectionHandler {
 			ObjectInputStream ois = new ObjectInputStream(bais);
 			ois.readInt();
 			return (VehicleInfo)ois.readObject();
+		}
+		catch(Exception e) {
+			return null;
+		}
+	}
+	private Instant extractInstant(byte[] data) {
+		try {
+			ByteArrayInputStream bais = new ByteArrayInputStream(data);
+			ObjectInputStream ois = new ObjectInputStream(bais);
+			ois.readInt();//opcode
+			ois.readObject();//vehicle info
+			return (Instant)ois.readObject();
 		}
 		catch(Exception e) {
 			return null;
