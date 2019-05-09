@@ -17,6 +17,7 @@ import java.util.Queue;
 
 public class IntersectionMain {
 	private static CCNA netAdapter;
+	private static boolean inIntersection = false;
     public static void main(String[] args) throws IOException{
 
         final int PORT = 5000;
@@ -64,10 +65,11 @@ public class IntersectionMain {
      * @param v - the vehicle passed to the function
      */
     public static void transitionUpdateHandler(LocalizationIntersectionUpdateMessage message, Vehicle v, CCNA netAdapter) {
-        VehicleInfo ourInfo = new VehicleInfo();
-        ourInfo.MACid = v.getAddress();
         if (message.getIntersectionCode() == 0){
+        	VehicleInfo ourInfo = new VehicleInfo();
+            ourInfo.MACid = v.getAddress();
             v.sendMessage(new SetSpeedMessage(0, 999999999));
+            inIntersection = true;
             ourInfo.isClear = false;
             ourInfo.locationID = message.getIntersectionCode();
             ourInfo.speed = 0;
@@ -75,9 +77,10 @@ public class IntersectionMain {
             ourInfo.otherVehicles = null;
             netAdapter.broadcast(ourInfo);
             Queue<VehicleInfo> atIntersection = netAdapter.listenToBroadcast(3000);
+            boolean waiting = false;
             if(atIntersection.isEmpty()) {
                 System.out.println("No one at intersection");
-                v.sendMessage(new SetSpeedMessage(200, 200));
+                //v.sendMessage(new SetSpeedMessage(200, 200));
             }
             else{
                 System.out.println("Intersection not empty");
@@ -89,18 +92,26 @@ public class IntersectionMain {
                 }
                 if (otherMaster) {
                     ourInfo.otherVehicles = netAdapter.becomeMaster(10000);
-                    ourInfo.otherVehicles.addAll(netAdapter.awaitClearIntersection(10000));
-                    v.sendMessage(new SetSpeedMessage(200, 200));
+                    waiting = true;
+                    //v.sendMessage(new SetSpeedMessage(200, 200));
                 }
                 else{
-                    v.sendMessage(new SetSpeedMessage(200, 200));
+                	ourInfo.otherVehicles = atIntersection;
+                    //v.sendMessage(new SetSpeedMessage(200, 200));
                 }
             }
+            //take master
             ourInfo.isMaster = true;
             netAdapter.broadcast(ourInfo);
+            if (waiting) {
+            	//give it 10 seconds tops (adjustable)
+            	ourInfo.otherVehicles.addAll(netAdapter.awaitClearIntersection(10000));
+            }
             v.sendMessage(new SetSpeedMessage(200, 200));
+            netAdapter.notify(ourInfo);
         }
-        else if(message.getIntersectionCode() == 1){
+        else if(message.getIntersectionCode() == 1 && inIntersection){
+        	inIntersection = false;
             System.out.println("Cleared Intersection");
             netAdapter.clearIntersection();
         }
