@@ -40,8 +40,6 @@ public class IntersectionMain {
         Vehicle v = vehicleList.get(0);
         v.connect();
         v.sendMessage(new SdkModeMessage());
-
-        v.sendMessage(new SetSpeedMessage(200, 200));
         
         Scanner s = new Scanner(System.in);
         //move to rightmost lane
@@ -61,6 +59,7 @@ public class IntersectionMain {
         }
         v.addMessageListener(LocalizationIntersectionUpdateMessage.class,
                 (message) -> transitionUpdateHandler(message, v, netAdapter));
+        v.sendMessage(new SetSpeedMessage(200, 200));
         boolean exitRequested = false;
         String response = "";
         while(!exitRequested) {
