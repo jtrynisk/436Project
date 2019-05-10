@@ -33,31 +33,35 @@ public class IntersectionMain {
 
         if(vehicleList.isEmpty()){
             System.out.println("No cars found");
+            netAdapter.kill();
+            anki.close();
+            return;
         }
         Vehicle v = vehicleList.get(0);
         v.connect();
         v.sendMessage(new SdkModeMessage());
 
         v.sendMessage(new SetSpeedMessage(200, 200));
+        
+        Scanner s = new Scanner(System.in);
         //move to rightmost lane
         try {
-        	System.out.println("Press enter for right lane, type anything else first for middle right lane.");
-        	byte[] inp = new byte[256];
-        	System.in.read(inp);
-        	if (inp[0] == 10) {
-        		v.sendMessage(new ChangeLaneMessage(100, 100, 64));
+        	v.sendMessage(new SetOffsetFromRoadCenterMessage(0));
+        	System.out.println("Press enter for current lane, type anything else first to shift right.");
+        	String inp = s.nextLine();
+        	if (inp.equalsIgnoreCase("right")) {
+        		v.sendMessage(new ChangeLaneMessage(32, 100, 100));
         	}
-        	else {
-        		v.sendMessage(new ChangeLaneMessage(100, 100, 32));
+        	else if (inp.equals("left")) {
+        		v.sendMessage(new ChangeLaneMessage(-32, 100, 100));
         	}
         }
         catch (Exception e) {
-        	v.sendMessage(new ChangeLaneMessage(100, 100, 64));
+        	v.sendMessage(new ChangeLaneMessage(32, 100, 100));
         }
         v.addMessageListener(LocalizationIntersectionUpdateMessage.class,
                 (message) -> transitionUpdateHandler(message, v, netAdapter));
         boolean exitRequested = false;
-        Scanner s = new Scanner(System.in);
         String response = "";
         while(!exitRequested) {
         	response = s.nextLine();
@@ -69,13 +73,13 @@ public class IntersectionMain {
         		v.sendMessage(new SetSpeedMessage(200, 200));
         		break;
         	case "stop:":
-        		v.sendMessage(new SetSpeedMessage(0, 999999));
+        		v.sendMessage(new SetSpeedMessage(0, 12500));
         		break;
         	case "right":
-        		v.sendMessage(new ChangeLaneMessage(100, 100, 64));
+        		v.sendMessage(new ChangeLaneMessage(32, 100, 100));
         		break;
         	case "left":
-        		v.sendMessage(new ChangeLaneMessage(100, 100, 32));
+        		v.sendMessage(new ChangeLaneMessage(-32, 100, 100));
         		break;
         	case "faster":
         		v.sendMessage(new SetSpeedMessage(250, 200));
