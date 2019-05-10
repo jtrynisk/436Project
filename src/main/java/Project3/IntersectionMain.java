@@ -90,11 +90,12 @@ public class IntersectionMain {
     }
 
     /**
-     * This takes an intersection message, and a vehicle and has the car stop,
-     * broadcast and listen for a message. It will then continue to navigate
-     * the track.
-     * @param message - the intersection message
-     * @param v - the vehicle passed to the function
+     * This method takes a a message that updates when it gets to an intersection, a vehicle so we can set
+     * the speed and tell it to stop, the netadapter goes through and communicates with the other vehicles in order
+     * to negotiatie four way intersections.
+     * @param message
+     * @param v
+     * @param netAdapter
      */
     public static void transitionUpdateHandler(LocalizationIntersectionUpdateMessage message, Vehicle v, CCNA netAdapter) {
         if (message.getIntersectionCode() == 0){
