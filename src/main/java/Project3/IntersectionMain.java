@@ -25,6 +25,10 @@ public class IntersectionMain {
         final int PORT = 5000;
         final String HOST = (args.length > 0) ? args[0] : "172.20.10.8";
         netAdapter = new CCNA();
+        if (!netAdapter.isOpen()) {
+        	System.out.println("Multicast unavailable.");
+        	return;
+        }
 
         //This does the initial setup of the car
         System.out.println("Creating connection");
