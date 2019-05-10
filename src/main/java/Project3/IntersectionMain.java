@@ -47,7 +47,7 @@ public class IntersectionMain {
         //move to rightmost lane
         try {
         	v.sendMessage(new SetOffsetFromRoadCenterMessage(0));
-        	System.out.println("Press enter for current lane, type anything else first to shift right.");
+        	System.out.println("Press enter for current lane, type left or right to shift lanes.");
         	String inp = s.nextLine();
         	if (inp.equalsIgnoreCase("right")) {
         		v.sendMessage(new ChangeLaneMessage(32, 100, 100));
