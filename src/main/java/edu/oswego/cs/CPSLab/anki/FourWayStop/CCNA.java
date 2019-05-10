@@ -22,12 +22,14 @@ public class CCNA implements IntersectionHandler {
 	 * a prerequisite for assigning us master. 
 	**/
 	private String lastMACbroadcast = "";
+	private boolean constructionSuccess = false;
 	
 	public CCNA() {
 		try {
 			sock = new MulticastSocket(PORT);
 			outSock = new DatagramSocket();
 			sock.joinGroup(InetAddress.getByName(MULTI_ADDRESS));
+			constructionSuccess = true;
 		}
 		catch (IOException e) {
 			System.out.println(e.getMessage());
@@ -37,7 +39,11 @@ public class CCNA implements IntersectionHandler {
 			if (outSock != null) {
 				outSock.close();
 			}
+			constructionSuccess = false;
 		}
+	}
+	public boolean isOpen() {
+		return constructionSuccess;
 	}
 	public void kill() {
 		try {
@@ -46,6 +52,7 @@ public class CCNA implements IntersectionHandler {
 		catch (Exception e) {}
 		sock.close();
 		outSock.close();
+		constructionSuccess = false;
 	}
 	//sender functions
 	//sends our info to everyone
