@@ -49,14 +49,14 @@ public class IntersectionMain {
         	System.out.println("Press enter for current lane, type right or more to shift lanes.");
         	String inp = s.nextLine();
         	if (inp.equalsIgnoreCase("right")) {
-        		v.sendMessage(new ChangeLaneMessage(32, 100, 100));
+        		v.sendMessage(new ChangeLaneMessage(40, 100, 100));
         	}
         	else if (inp.equals("more")) {
-        		v.sendMessage(new ChangeLaneMessage(64, 100, 100));
+        		v.sendMessage(new ChangeLaneMessage(80, 100, 100));
         	}
         }
         catch (Exception e) {
-        	v.sendMessage(new ChangeLaneMessage(32, 100, 100));
+        	v.sendMessage(new ChangeLaneMessage(40, 100, 100));
         }
         v.addMessageListener(LocalizationIntersectionUpdateMessage.class,
                 (message) -> transitionUpdateHandler(message, v, netAdapter));
