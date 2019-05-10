@@ -72,6 +72,8 @@ public class IntersectionMain {
         	case "go":
         		v.sendMessage(new SetSpeedMessage(200, 200));
         		break;
+        	case "u":
+        		v.sendMessage(new TurnMessage(3, 1));
         	case "stop:":
         		v.sendMessage(new SetSpeedMessage(0, 12500));
         		break;
