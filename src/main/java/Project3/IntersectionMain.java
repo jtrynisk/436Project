@@ -4,6 +4,7 @@ import de.adesso.anki.AnkiConnector;
 import de.adesso.anki.RoadmapScanner;
 import de.adesso.anki.Vehicle;
 import de.adesso.anki.messages.*;
+import de.adesso.anki.messages.LightsPatternMessage.LightConfig;
 import de.adesso.anki.roadmap.Roadmap;
 import edu.oswego.cs.CPSLab.anki.FourWayStop.CCNA;
 import edu.oswego.cs.CPSLab.anki.FourWayStop.VehicleInfo;
@@ -45,13 +46,13 @@ public class IntersectionMain {
         //move to rightmost lane
         try {
         	v.sendMessage(new SetOffsetFromRoadCenterMessage(0));
-        	System.out.println("Press enter for current lane, type left or right to shift lanes.");
+        	System.out.println("Press enter for current lane, type right or more to shift lanes.");
         	String inp = s.nextLine();
         	if (inp.equalsIgnoreCase("right")) {
         		v.sendMessage(new ChangeLaneMessage(32, 100, 100));
         	}
-        	else if (inp.equals("left")) {
-        		v.sendMessage(new ChangeLaneMessage(-32, 100, 100));
+        	else if (inp.equals("more")) {
+        		v.sendMessage(new ChangeLaneMessage(64, 100, 100));
         	}
         }
         catch (Exception e) {
@@ -68,23 +69,13 @@ public class IntersectionMain {
         	case "exit":
         		exitRequested = true;
         		break;
-        	case "go":
-        		v.sendMessage(new SetSpeedMessage(200, 200));
-        		break;
-        	case "u":
-        		v.sendMessage(new TurnMessage(3, 1));
-        	case "stop:":
-        		v.sendMessage(new SetSpeedMessage(0, 12500));
-        		break;
-        	case "right":
-        		v.sendMessage(new ChangeLaneMessage(32, 100, 100));
-        		break;
-        	case "left":
-        		v.sendMessage(new ChangeLaneMessage(-32, 100, 100));
-        		break;
-        	case "faster":
-        		v.sendMessage(new SetSpeedMessage(250, 200));
-        		break;
+        	case "lights":
+        		LightConfig lc = new LightConfig(LightsPatternMessage.LightChannel.FRONT_GREEN, LightsPatternMessage.LightEffect.THROB, 50, 0, 10);
+        		LightConfig lc2 = new LightConfig(LightsPatternMessage.LightChannel.ENGINE_RED, LightsPatternMessage.LightEffect.FADE, 50, 0, 10);
+                LightsPatternMessage lpm = new LightsPatternMessage();
+                lpm.add(lc);
+                lpm.add(lc2);
+                v.sendMessage(lpm);
         	}
         }
         //clean up
