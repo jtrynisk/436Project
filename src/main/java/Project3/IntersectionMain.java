@@ -1,16 +1,13 @@
 package Project3;
 
 import de.adesso.anki.AnkiConnector;
-import de.adesso.anki.RoadmapScanner;
 import de.adesso.anki.Vehicle;
 import de.adesso.anki.messages.*;
 import de.adesso.anki.messages.LightsPatternMessage.LightConfig;
-import de.adesso.anki.roadmap.Roadmap;
 import edu.oswego.cs.CPSLab.anki.FourWayStop.CCNA;
 import edu.oswego.cs.CPSLab.anki.FourWayStop.VehicleInfo;
 
 import java.time.Instant;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Scanner;
 
@@ -48,20 +45,9 @@ public class IntersectionMain {
         
         Scanner s = new Scanner(System.in);
         //move to rightmost lane
-        try {
-        	v.sendMessage(new SetOffsetFromRoadCenterMessage(0));
-        	System.out.println("Press enter for current lane, type right or more to shift lanes.");
-        	String inp = s.nextLine();
-        	if (inp.equalsIgnoreCase("right")) {
-        		v.sendMessage(new ChangeLaneMessage(40, 100, 100));
-        	}
-        	else if (inp.equals("more")) {
-        		v.sendMessage(new ChangeLaneMessage(80, 100, 100));
-        	}
-        }
-        catch (Exception e) {
-        	v.sendMessage(new ChangeLaneMessage(40, 100, 100));
-        }
+        System.out.println("Please place the vehicle in the rightmost lane, the press enter.");
+        String inp = s.nextLine();
+        
         v.addMessageListener(LocalizationIntersectionUpdateMessage.class,
                 (message) -> transitionUpdateHandler(message, v, netAdapter));
         v.sendMessage(new SetSpeedMessage(200, 200));
